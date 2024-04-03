@@ -15,6 +15,8 @@
 #include <rg/Model.h>
 
 #include <iostream>
+#include <vector>
+#include <time.h>
 
 void frameBufferSizeCallBack(GLFWwindow *window, int width, int height);
 
@@ -105,7 +107,7 @@ int main() {
         return -1;
     }
 
-    stbi_set_flip_vertically_on_load(true);
+    //stbi_set_flip_vertically_on_load(true);
 
     //konfiguracija OpenGL-a
     glEnable(GL_DEPTH_TEST);
@@ -115,16 +117,27 @@ int main() {
     //kreiranje shader-a
     Shader ourShader("resources/shaders/vertex_shader.vs", "resources/shaders/direction_light.fs");
 
+    //Shader ourShader2("resources/shaders/vertex_shader.vs", "resources/shaders/direction_light.fs");
+
     //ucitavanje modela
-    Model ourModel("resources/objects/tree/Tree.obj");
+    Model ourModel("resources/objects/grass/10450_Rectangular_Grass_Patch_v1_iterations-2.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
+
+    Model ourModel2("resources/objects/tree/Tree.obj");
+    ourModel2.SetShaderTextureNamePrefix("material1.");
 
     dirLight.mDirection = glm::vec3(-0.0, -0.0f, -1.0f);
     dirLight.mAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
     dirLight.mDiffuse = glm::vec3(1.0f, 1.0f, 1.0f);
     dirLight.mSpecular = glm::vec3(1.0f, 1.0f, 1.0f);
 
-    camera.m_position = glm::vec3(0.0f, 2.0f, 4.0f);
+    camera.m_position = glm::vec3(0.0f, 2.0f, 0.0f);
+
+    std::vector<float> floats(100);
+
+    for (unsigned int i = 0; i < 100; i++) {
+        floats.at(i) = ((float) random()/2147483646) * 2 - 1;
+    }
 
     //petlja za renderovanje
     while (!glfwWindowShouldClose(window)) {
@@ -157,11 +170,32 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        glm::mat4 model = glm::mat4(1.0f);
-        glm::vec3 modelPosition = glm::vec3(0.0f);
         glm::vec3 modelScale = glm::vec3(1.0f);
 
-        model = glm::translate(model, modelPosition);
+        for (unsigned int i = 0; i < 100; i++) {
+            float f = floats.at(i) * 100;
+            glm::mat4 model2 = glm::mat4(1.0f);
+            glm::vec3 pos = glm::vec3(glm::sin(glm::radians((float) i * 2))*f, 0.0f, glm::cos(glm::radians((float) i * 2))*f);
+            model2 = glm::translate(model2, pos);
+            model2 = glm::scale(model2, modelScale);
+            ourShader.setMat4("model", model2);
+            ourModel2.Draw(ourShader);
+        }
+
+        /*
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
+        model = glm::translate(model, pos);
+        model = glm::scale(model, modelScale);
+        ourShader.setMat4("model", model);
+        ourModel2.Draw(ourShader);*/
+
+        modelScale = glm::vec3(0.5f);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::vec3 pos = glm::vec3(0.0f, -6.0f, 0.0f);
+        model = glm::translate(model, pos);
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::scale(model, modelScale);
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
