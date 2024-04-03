@@ -1,4 +1,4 @@
-/home/vanmi/Documents/clion/clion-2023.3.4/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/vanmi/Documents/clion/clion-2023.3.4/bin/ninja/linux/x64/ninja -G Ninja -S /home/vanmi/Documents/Projekti/rgraf/projekat -B /home/vanmi/Documents/Projekti/rgraf/projekat/cmake-build-debug
+/home/vanmi/Documents/clion/clion-2023.3.4/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/vanmi/Documents/clion/clion-2023.3.4/bin/ninja/linux/x64/ninja -G Ninja -S /home/vanmi/Documents/Projekti/rgraf/rgProjekat -B /home/vanmi/Documents/Projekti/rgraf/rgProjekat/cmake-build-debug
 -- The C compiler identification is GNU 11.4.0
 -- The CXX compiler identification is GNU 11.4.0
 -- Detecting C compiler ABI info
@@ -14,6 +14,6 @@
 -- Found OpenGL: /usr/lib/x86_64-linux-gnu/libOpenGL.so   
 -- Found GLFW3: /usr/lib/x86_64-linux-gnu/libglfw.so  
 -- Found ASSIMP: /usr/lib/x86_64-linux-gnu/libassimp.so
--- Configuring done (11.7s)
--- Generating done (0.1s)
--- Build files have been written to: /home/vanmi/Documents/Projekti/rgraf/projekat/cmake-build-debug
+-- Configuring done (2.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/vanmi/Documents/Projekti/rgraf/rgProjekat/cmake-build-debug

@@ -1,4 +1,4 @@
-# Install script for directory: /home/vanmi/Documents/Projekti/rgraf/projekat
+# Install script for directory: /home/vanmi/Documents/Projekti/rgraf/rgProjekat
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,8 +44,8 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/vanmi/Documents/Projekti/rgraf/projekat/cmake-build-debug/libs/glad/cmake_install.cmake")
-  include("/home/vanmi/Documents/Projekti/rgraf/projekat/cmake-build-debug/libs/imgui/cmake_install.cmake")
+  include("/home/vanmi/Documents/Projekti/rgraf/rgProjekat/cmake-build-debug/libs/glad/cmake_install.cmake")
+  include("/home/vanmi/Documents/Projekti/rgraf/rgProjekat/cmake-build-debug/libs/imgui/cmake_install.cmake")
 
 endif()
 
@@ -57,5 +57,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/vanmi/Documents/Projekti/rgraf/projekat/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/vanmi/Documents/Projekti/rgraf/rgProjekat/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
