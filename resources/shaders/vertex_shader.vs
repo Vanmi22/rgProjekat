@@ -14,7 +14,11 @@ uniform mat4 projection;
 void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = aNormal;
+    mat3 normalMatrix = mat3(model);
+    normalMatrix = inverse(normalMatrix);
+    normalMatrix = transpose(normalMatrix);
+
+    Normal = normalize(aNormal * normalMatrix);
     TexCoords = aTexCoords;    
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }
