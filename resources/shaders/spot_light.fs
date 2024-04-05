@@ -26,7 +26,6 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
-uniform vec3 viewPos;
 uniform Material material;
 uniform spotLight light;
 

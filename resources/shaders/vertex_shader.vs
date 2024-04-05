@@ -14,6 +14,7 @@ uniform mat4 projection;
 void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
+
     mat3 normalMatrix = mat3(model);
     normalMatrix = inverse(normalMatrix);
     normalMatrix = transpose(normalMatrix);

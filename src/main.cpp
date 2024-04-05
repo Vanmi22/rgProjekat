@@ -16,7 +16,6 @@
 
 #include <iostream>
 #include <vector>
-#include <time.h>
 
 void frameBufferSizeCallBack(GLFWwindow *window, int width, int height);
 
@@ -81,6 +80,12 @@ struct PointLight {
 Camera camera;
 
 DirLight dirLight{};
+
+SpotLight spotLight{};
+
+bool day = true;
+
+float nightVision = 0.0f;
 
 int main() {
     //glfw: inicijalizacija i konfiguracija
@@ -161,6 +166,27 @@ int main() {
             1.0f, -1.0f,  1.0f
     };
 
+    float quadVertices[] = {
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f,  0.0f, 0.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            1.0f, -1.0f,  1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -170,27 +196,63 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
-    std::vector<std::string> faces{
-            FileSystem::getPath("resources/skybox/right.jpg"),
-            FileSystem::getPath("resources/skybox/left.jpg"),
-            FileSystem::getPath("resources/skybox/top.jpg"),
-            FileSystem::getPath("resources/skybox/bottom.jpg"),
-            FileSystem::getPath("resources/skybox/front.jpg"),
-            FileSystem::getPath("resources/skybox/back.jpg")
+    unsigned int textureColorBufferMultiSampled;
+    glGenTextures(1, &textureColorBufferMultiSampled);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, SRC_WIDTH, SRC_HEIGHT, GL_TRUE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, SRC_WIDTH, SRC_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << "\n";
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    std::vector<std::string> day_faces{
+            "resources/cubemap/day/right.jpg",
+            "resources/cubemap/day/left.jpg",
+            "resources/cubemap/day/top.jpg",
+            "resources/cubemap/day/bottom.jpg",
+            "resources/cubemap/day/front.jpg",
+            "resources/cubemap/day/back.jpg"
     };
-    unsigned int cubemapTexture = loadCubemap(faces);
+    unsigned int cubemapTextureDay = loadCubemap(day_faces);
+
+    std::vector<std::string> night_faces{
+            "resources/cubemap/night/left.jpg",
+            "resources/cubemap/night/left.jpg",
+            "resources/cubemap/night/left.jpg",
+            "resources/cubemap/night/left.jpg",
+            "resources/cubemap/night/left.jpg",
+            "resources/cubemap/night/left.jpg"
+    };
+    unsigned int cubemapTextureNight = loadCubemap(night_faces);
 
 
     //kreiranje shader-a
-    Shader ourShader("resources/shaders/vertex_shader.vs", "resources/shaders/direction_light.fs");
-
+    Shader dirShader("resources/shaders/vertex_shader.vs", "resources/shaders/direction_light.fs");
     Shader skyboxShader("resources/shaders/skybox_shader.vs", "resources/shaders/skybox_shader.fs");
+    Shader spotShader("resources/shaders/vertex_shader.vs", "resources/shaders/spot_light.fs");
+    Shader screenShader("resources/shaders/aa_shader.vs", "resources/shaders/aa_shader.fs");
 
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
-    //Shader ourShader2("resources/shaders/vertex_shader.vs", "resources/shaders/direction_light.fs");
+    screenShader.use();
+    screenShader.setInt("screenTexture", 0);
+    screenShader.setInt("width", SRC_WIDTH);
+    screenShader.setInt("height", SRC_HEIGHT);
+
 
     //ucitavanje modela
     Model ourModel("resources/objects/grass/Plane.obj");
@@ -209,6 +271,17 @@ int main() {
 
     camera.m_position = glm::vec3(2.0f, 2.0f, 10.0f);
 
+    spotLight.mPosition = camera.m_position;
+    spotLight.mDirection = camera.m_front;
+    spotLight.mCutOff = glm::cos(glm::radians(12.5f));
+    spotLight.mOuterCutOff = glm::cos(glm::radians(17.5f));
+    spotLight.mAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+    spotLight.mDiffuse = glm::vec3(0.8f);
+    spotLight.mSpecular = glm::vec3(1.0f);
+    spotLight.mConstant = 1.0f;
+    spotLight.mLinear = 0.09f;
+    spotLight.mQuadratic = 0.032f;
+
     std::vector<float> floats(100);
 
     for (unsigned int i = 0; i < 100; i++) {
@@ -226,25 +299,48 @@ int main() {
         processInput(window);
 
         //render
-        glClearColor(0.3f, 0.7f, 0.8f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        ourShader.use();
-        ourShader.setVec3("directional_light.m_direction", dirLight.mDirection);
-        ourShader.setVec3("directional_light.m_ambient", dirLight.mAmbient);
-        ourShader.setVec3("directional_light.m_diffuse", dirLight.mDiffuse);
-        ourShader.setVec3("directional_light.m_specular", dirLight.mSpecular);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
 
-        ourShader.setVec3("viewPosition", camera.m_position);
+        Shader *tmpShader;
 
-        ourShader.setFloat("material.m_shininess", 32.0f);
+        if (day) {
+            dirShader.use();
+            dirShader.setVec3("directional_light.m_direction", dirLight.mDirection);
+            dirShader.setVec3("directional_light.m_ambient", dirLight.mAmbient);
+            dirShader.setVec3("directional_light.m_diffuse", dirLight.mDiffuse);
+            dirShader.setVec3("directional_light.m_specular", dirLight.mSpecular);
+            dirShader.setVec3("viewPosition", camera.m_position);
+            dirShader.setFloat("material.m_shininess", 32.0f);
+            tmpShader = &dirShader;
+        }
+        else {
+            spotShader.use();
+            spotShader.setVec3("light.m_position", camera.m_position);
+            spotShader.setVec3("light.m_direction", camera.m_front);
+            spotShader.setFloat("light.m_cutOff", spotLight.mCutOff);
+            spotShader.setFloat("light.m_outerCutOff", spotLight.mOuterCutOff);
+            spotShader.setVec3("light.m_ambient", spotLight.mAmbient);
+            spotShader.setVec3("light.m_diffuse", spotLight.mDiffuse);
+            spotShader.setVec3("light.m_specular", spotLight.mSpecular);
+            spotShader.setFloat("light.m_constant", spotLight.mConstant);
+            spotShader.setFloat("light.m_linear", spotLight.mLinear);
+            spotShader.setFloat("light.m_quadratic", spotLight.mQuadratic);
+            spotShader.setFloat("material.m_shininess", 32.0f);
+            tmpShader = &spotShader;
+        }
 
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.m_zoom),
                                                 (float) SRC_WIDTH / (float) SRC_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
+        tmpShader->setMat4("projection", projection);
+        tmpShader->setMat4("view", view);
 
         glm::vec3 modelScale = glm::vec3(1.0f);
 
@@ -254,17 +350,9 @@ int main() {
             glm::vec3 pos = glm::vec3(glm::sin(glm::radians((float) i * 6))*f, 0.0f, glm::cos(glm::radians((float) i * 6))*f);
             model2 = glm::translate(model2, pos);
             model2 = glm::scale(model2, modelScale);
-            ourShader.setMat4("model", model2);
-            ourModel2.Draw(ourShader);
+            tmpShader->setMat4("model", model2);
+            ourModel2.Draw(*tmpShader);
         }
-
-        /*
-        glm::mat4 model = glm::mat4(1.0f);
-        glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
-        model = glm::translate(model, pos);
-        model = glm::scale(model, modelScale);
-        ourShader.setMat4("model", model);
-        ourModel2.Draw(ourShader);*/
 
         modelScale = glm::vec3(3.0f);
 
@@ -273,8 +361,8 @@ int main() {
         model = glm::translate(model, pos);
         //model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::scale(model, modelScale);
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        tmpShader->setMat4("model", model);
+        ourModel.Draw(*tmpShader);
 
         modelScale = glm::vec3(0.8f);
 
@@ -283,18 +371,18 @@ int main() {
         model = glm::translate(model, pos);
         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, modelScale);
-        ourShader.setMat4("model", model);
-        ourModel3.Draw(ourShader);
+        tmpShader->setMat4("model", model);
+        ourModel3.Draw(*tmpShader);
 
         modelScale = glm::vec3(0.8f);
 
         model = glm::mat4(1.0f);
-        pos = glm::vec3(10.0f, 1.1f, 10.0f);
+        pos = glm::vec3(-10.0f, 1.1f, 1.0f);
         model = glm::translate(model, pos);
-        model = glm::rotate(model, glm::radians(-110.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //model = glm::rotate(model, glm::radians(-110.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, modelScale);
-        ourShader.setMat4("model", model);
-        ourModel3.Draw(ourShader);
+        tmpShader->setMat4("model", model);
+        ourModel3.Draw(*tmpShader);
 
         //std::cout << camera.m_position.x << " " << camera.m_position.z << "\n";
 
@@ -305,10 +393,28 @@ int main() {
         skyboxShader.setMat4("projection", projection);
         glBindVertexArray(skyboxVAO);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        if (day) {
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureDay);
+        }
+        else {
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureNight);
+        }
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+
+        screenShader.use();
+        screenShader.setFloat("nightVision", nightVision);
+        glBindVertexArray(quadVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glEnable(GL_DEPTH_TEST);
 
         //glfw: zameni buffer-e i proveri ulaze (pritisnuti dugmici, pomeren mis)
         glfwSwapBuffers(window);
@@ -357,7 +463,42 @@ void scrollCallBack(GLFWwindow *window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(yoffset);
 }
 
-void keyCallBack(GLFWwindow *window, int key, int scancode, int action, int mods) {}
+void keyCallBack(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        if (nightVision != 1.0f) {
+            spotLight.mConstant = 1.0f;
+            spotLight.mLinear = 0.09f;
+            spotLight.mQuadratic = 0.032f;
+            if (spotLight.mCutOff == glm::cos(glm::radians(12.5f))) {
+                spotLight.mCutOff = glm::cos(glm::radians(0.0f));
+                spotLight.mOuterCutOff = glm::cos(glm::radians(0.0f));
+            } else {
+                spotLight.mCutOff = glm::cos(glm::radians(12.5f));
+                spotLight.mOuterCutOff = glm::cos(glm::radians(17.5f));
+            }
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
+        nightVision = -nightVision + 1.0f;
+        if (nightVision == 1.0f) {
+            spotLight.mCutOff = glm::cos(glm::radians(180.0f));
+            spotLight.mOuterCutOff = glm::cos(glm::radians(180.0f));
+            spotLight.mLinear = 0.09f;
+            spotLight.mConstant = 0.05f;
+            spotLight.mQuadratic = 0.005f;
+        }
+        else {
+            spotLight.mCutOff = glm::cos(glm::radians(0.0f));
+            spotLight.mOuterCutOff = glm::cos(glm::radians(0.0f));
+            spotLight.mConstant = 1.0f;
+            spotLight.mLinear = 0.09f;
+            spotLight.mQuadratic = 0.032f;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        day = !day;
+    }
+}
 
 unsigned int loadCubemap(std::vector<std::string> faces)
 {
