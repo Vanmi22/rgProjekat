@@ -37,7 +37,9 @@ vec3 CalcDirLight(DirLight directional_light, vec3 normal, vec3 view_direction)
 
     vec3 reflected_light_direction = reflect(-light_direction, normal);
 
-    float spec = pow(max(dot(view_direction, reflected_light_direction), 0.0), material.m_shininess);
+    vec3 halfway_direction = normalize(light_direction + view_direction);
+
+    float spec = pow(max(dot(normal, halfway_direction), 0.0), material.m_shininess);
 
     vec3 ambient = directional_light.m_ambient * vec3(texture(material.texture_diffuse1, TexCoords));
     vec3 diffuse = diff * directional_light.m_diffuse * vec3(texture(material.texture_diffuse1, TexCoords));

@@ -1,4 +1,4 @@
-# Install script for directory: /home/vanmi/Documents/Projekti/rgraf/rgProjekat/libs/imgui
+# Install script for directory: /home/vanmi/Documents/Projekti/rgProjekat/libs/imgui
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

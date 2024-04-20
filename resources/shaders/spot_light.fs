@@ -42,8 +42,8 @@ void main()
 
     // specular
     vec3 viewDir = normalize(light.m_position - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.m_shininess);
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), material.m_shininess);
     vec3 specular = light.m_specular * spec * vec3(texture(material.texture_specular1, TexCoords).xxx);
 
     // spotlight (soft edges)
